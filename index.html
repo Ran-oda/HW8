@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .line {
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .axis-label {
+            font-size: 14px;
+        }
+
+        .grid line {
+            stroke: lightgray;
+            stroke-opacity: 0.7;
+            shape-rendering: crispEdges;
+        }
+
+        .line {
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .axis-label {
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>INFO 3300 HOMEWORK #7</h1>
+    <h2>Name: Randy Odago - NetID: reo37</h2>
+    <p>#1 . I will be using the Mario Kart data to create the graph</p>
+
+    <svg id="canvas" width="800" height="400"></svg>
+
+    <script>
+        let svg = d3.select("#canvas");
+
+        let margins = { top: 10, right: 50, bottom: 80, left: 90 };
+        let chartWidth = 800 - margins.left - margins.right;
+        let chartHeight = 400 - margins.top - margins.bottom;
+
+        let chartArea = svg.append("g")
+            .attr("transform", `translate(${margins.left},${margins.top})`);
+
+        d3.json("./mariokart_records.json").then((data) => {
+            console.log("Loaded data:", data);
+
+            const timeParser = d3.timeParse("%Y-%m-%d");
+            let date_extent = [timeParser(data.earliest_date), timeParser(data.latest_date)];
+            let value_extent = [data.min_value, data.max_value];
+
+            console.log("Data", date_extent);
+            console.log("Value", value_extent);
+
+            const xScale = d3.scaleTime()
+                .domain(date_extent)
+                .range([0, chartWidth]);
+
+            const yScale = d3.scaleLinear()
+                .domain(value_extent)
+                .range([chartHeight, 0]);
+
+            const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
+                .domain(data.timeseries.map(d => d.track));
+
+            // add margin to seperate data from line
+            let x = d3.axisBottom(xScale);
+            let y = d3.axisLeft(yScale);
+
+            chartArea.append("g")
+                .attr("transform", `translate(0, ${chartHeight + 10})`)
+                .call(x);
+//seperate like in picture.. to the left
+            chartArea.append("g")
+                .attr("transform", `translate(-10, 0)`)
+                .call(y);
+
+
+            chartArea.append("g")
+                .attr("class", "grid")
+                .selectAll("line")
+                .data(xScale.ticks())
+                .join("line")
+                .attr("x1", d => xScale(d))
+                .attr("x2", d => xScale(d))
+                .attr("y1", 0)
+                .attr("y2", chartHeight + 10)
+                .attr("stroke", "lightgray")
+                .attr("stroke-opacity", 0.7)
+                .attr("shape-rendering", "crispEdges");
+
+            chartArea.append("g")
+                .attr("class", "grid")
+                .selectAll("line")
+                .data(yScale.ticks())
+                .join("line")
+                .attr("x1", -10)
+                .attr("x2", chartWidth - 10)
+                .attr("y1", d => yScale(d))
+                .attr("y2", d => yScale(d))
+                .attr("stroke", "lightgray")
+                .attr("stroke-opacity", 0.7)
+                .attr("shape-rendering", "crispEdges");
+
+            // part D
+            const lineGenerator = d3.line()
+                .x(d => xScale(timeParser(d.date)))
+                .y(d => yScale(d.record_time));
+
+            const gTags = chartArea.selectAll(".lines")
+                .data(data.timeseries)
+                .join("g")
+                .attr("class", "lines");
+
+            gTags.append("path")
+                .attr("class", "line")
+                .attr("d", d => lineGenerator(d.values))
+                .attr("stroke", d => colorScale(d.track));
+
+
+            // optional part G
+            gTags.selectAll("circle")
+                .data(d => d.values)
+                .join("circle")
+                .attr("cx", d => xScale(timeParser(d.date)))
+                .attr("cy", d => yScale(d.record_time))
+                .attr("r", 2)
+                .attr("fill", d => colorScale(d.track));
+
+            data.timeseries.forEach(track => {
+                console.log(`Track: ${track.track}`);
+                track.values.forEach(d => {
+                    console.log(timeParser(d.date), d.record_time);
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>
